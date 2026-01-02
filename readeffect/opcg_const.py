@@ -389,4 +389,180 @@ RAW_PATTERNS = [
     (r'\)', ' [BRKT_CLOSE] '),
     (r'「', ' [QT_OPEN] '),
     (r'」', ' [QT_CLOSE] '),
+        # --- 追加: 登場・移動関連のアクション(活用形・受動態) ---
+    (r'登場させることができる', ' [ACT_SUMMON_CAUS_OPT] '),
+    (r'登場させる', ' [ACT_SUMMON_CAUS] '),
+    (r'登場させた時', ' [TRG_SUMMONED_CAUS] '),
+    (r'登場させた', ' [ACT_SUMMONED_CAUS] '),
+    (r'登場できる', ' [STAT_CAN_SUMMON] '),
+    (r'登場する', ' [ACT_SUMMON_DO] '),
+    (r'登場し', ' [ACT_SUMMON_SEQ] '),
+    (r'デッキに戻した', ' [ACT_DECK_RETURNED] '),
+    (r'戻した', ' [ACT_RETURNED] '),
+    (r'捨てた', ' [ACT_DISCARDED] '),
+    (r'加わった時', ' [TRG_JOINED] '),
+    (r'加わった', ' [ACT_JOINED] '),
+    (r'加わる', ' [ACT_JOIN_DO] '),
+    (r'置かれる', ' [ACT_PUT_PASSIVE] '),
+    (r'入れ替えた', ' [ACT_SWAPPED] '),
+    (r'入れ替える', ' [ACT_SWAP] '),
+    
+    # --- 追加: バトル・アタック関連のアクション ---
+    (r'アタックすることができる', ' [STAT_CAN_ATTACK_FULL] '),
+    (r'アタックする', ' [ACT_ATTACK_DO] '),
+    (r'アタックした', ' [ACT_ATTACKED] '),
+    (r'バトルした', ' [ACT_BATTLED] '),
+    (r'バトルを行う', ' [ACT_BATTLE_DO] '),
+    
+    # --- 追加: 状態・条件・否定 ---
+    (r'自分の手札が', ' [CND_SELF_HAND_SUB] '),
+    (r'引くことができない', ' [STAT_CANNOT_DRAW] '),
+    (r'場を離れない', ' [STAT_NO_LEAVE] '),
+    (r'付与されている', ' [CND_ATTACHED] '),
+    (r'異なる色', ' [CND_DIFF_COLOR] '),
+    (r'KOされる', ' [CND_KO_PASSIVE] '),
+    (r'せず', ' [CND_NOT_DO_SEQ] '), # 「発動せず」などの否定接続
+    
+    # --- 追加: 具体的語彙・文脈語 ---
+    (r'枚引く', ' [ACT_DRAW_QTY] '),
+    (r'離れ', ' [CND_LEAVE_SEQ] '), # 「場を離れ、~」の移動条件
+    (r'支払う', ' [ACT_PAY] '),
+    (r'少なく', ' [VAL_LESS] '),
+    (r'与える', ' [ACT_DEAL] '),
+    (r'他の', ' [REF_OTHER] '),
+    (r'手札から', ' [P_FROM_HAND] '),
+    (r'リフレッシュフェイズ', ' [PHASE_REFRESH] '),
+    (r'裏向きにできる', ' [ACT_FACEDOWN_OPT] '),
+    
+    # --- 追加: 構造・キーワード ---
+    (r'【', ' [BRKT_KWD_OPEN] '), # キーワード能力の開始記号
+    (r'】', ' [BRKT_KWD_CLOSE] '), # キーワード能力の終了記号
+    (r'速攻', ' [KWD_RUSH_TEXT] '), # テキスト内で言及されるキーワード名
+        # --- 15. 残存日本語・文法補完 (カバレッジ100%用) ---
+    # 文脈のあるフレーズ (優先度高)
+    (r'このターン終了時', ' [TRG_THIS_TURN_END] '),
+    (r'なった時', ' [TRG_BECAME] '),
+    (r'バトルしている', ' [CND_BATTLING] '),
+    (r'加えられない', ' [STAT_CANNOT_ADD] '),
+    (r'ルール上', ' [RULE_GENERIC] '), # 念のため再定義
+    
+    # 否定形・進行形・接続
+    (r'できない', ' [STAT_CANNOT] '),
+    (r'できない', ' [STAT_CANNOT] '),
+    (r'している', ' [STAT_PROG] '),
+    (r'して', ' [ACT_DO_SEQ] '),
+    (r'次に、?', ' [ADV_NEXTly] '),
+    (r'次', ' [NOUN_NEXT] '),
+    (r'それぞれ', ' [ADV_EACH] '),
+    
+    # 動詞・アクション
+    (r'支払う', ' [ACT_PAY] '),
+    (r'少なくなる', ' [ACT_DECREASE] '),
+    (r'追加し', ' [ACT_ADD_SEQ] '),
+    (r'入れ替える', ' [ACT_SWAP] '),
+    
+    # 名詞・コスト表記
+    (r'ターン', ' [NOUN_TURN] '),
+    (r'カウンター', ' [NOUN_COUNTER] '), # カウンター+1000等に影響しないよう末尾推奨
+    (r'リフレッシュフェイズ', ' [PHASE_REFRESH] '),
+    (r'ドン!!-?(\d+)', ' [COST_DON_MINUS_ACT] '), # 括弧なしのコスト表記対応
+    
+    # 最終的な掃除 (優先度低)
+    (r'時', ' [TRG_WHEN] '), # 孤立した「時」
+    (r'元々', ' [MOD_BASE_RAW] '),
+    (r'回復する', ' [ACT_RECOVER] '),
+        # --- 16. 完結編:補助動詞結合・受動態・残りカス掃除 ---
+    
+    # 「~する」+「ことができる」の結合問題解消 (最重要: 「す」が消えます)
+    (r'することができる', ' [STAT_CAN_DO] '),
+    (r'することができない', ' [STAT_CANNOT_DO] '),
+    (r'ことができない', ' [STAT_CANNOT_FULL] '),
+    
+    # 受動態・~される (エース、ガープ等)
+    (r'付与された', ' [TRG_ATTACHED] '),
+    (r'付与され', ' [CND_ATTACHED_SEQ] '),
+    (r'アタックされた', ' [TRG_ATTACKED_PASSIVE] '),
+    (r'された', ' [PASSIVE_PAST] '),
+    (r'され', ' [PASSIVE_SEQ] '),
+    
+    # 状態変化・設定 (アイン等)
+    (r'にする', ' [ACT_SET_TO] '), # 「パワーを0にする」対応
+    
+    # 特定用語・アクション
+    (r'プレイ', ' [ACT_PLAY] '), # シャンクス等 (「登場」と区別される用語)
+    (r'メインフェイズ', ' [PHASE_MAIN] '), # 黄ルフィ等
+    (r'ゲーム', ' [NOUN_GAME] '), # ロジャー (特殊勝利)
+    
+    # 期間の微調整
+    (r'ターン中', ' [DUR_TURN_GENERIC] '), # 「登場したターン中」等
+    
+    # その他マイナーな残り
+    (r'中', ' [DUR_DURING] '),
+    (r'際', ' [TRG_WHEN_DOING] '),
+        # --- 17. 最終仕上げ:複合動詞・過去形結合 ---
+    (r'公開することができる', ' [ACT_REVEAL_OPT] '),
+    (r'登場した', ' [ACT_SUMMONED] '),
+    (r'レストにした', ' [ACT_RESTED] '),
+    
+    # 念のための補強
+    (r'公開する', ' [ACT_REVEAL_DO] '), 
+    (r'入れ替えた', ' [ACT_SWAPPED] '),
+        # --- 18. ラストスパート:未定義の活用形・接続語・名詞 ---
+    
+    # 付与のバリエーション (最重要)
+    (r'付与することができる', ' [ACT_ATTACH_OPT] '),
+    (r'付与される', ' [ACT_ATTACH_PASSIVE] '), # ロジャー等の「付与され+る」対策
+    (r'付与されている', ' [CND_ATTACHED_PROG] '),
+    (r'付与した', ' [ACT_ATTACHED] '),
+    (r'付与し', ' [ACT_ATTACH_SEQ] '),
+    
+    # 過去形・完了形
+    (r'KOした', ' [ACT_KOED] '),
+    (r'置いた', ' [ACT_PUT_PAST] '),
+    
+    # アクション・能動態
+    (r'シャッフルできる', ' [ACT_SHUFFLE_CAN] '),
+    (r'無効にし', ' [ACT_NEGATE_SEQ] '),
+    (r'飛ばされる', ' [ACT_SKIPPED] '), # ロジャー「ドローフェイズは飛ばされる」
+    
+    # 接続・比較・数量
+    (r'さらに', ' [SEP_FURTHERMORE] '),
+    (r'より', ' [CMP_THAN] '), # 「~枚より」
+    (r'少ない', ' [CMP_FEW] '),
+    
+    # 特定フレーズ・名詞
+    (r'効果がない', ' [FIL_NO_EFFECT_PRED] '), # ウタ「効果がない」
+    (r'ドン!!フェイズ', ' [PHASE_DON] '),
+    (r'フェイズ', ' [NOUN_PHASE] '), # 汎用の「フェイズ」
+        # --- 19. グランドフィナーレ:特定の用語・ルール・記号 ---
+    
+    # 条件の結合順序修正 (最優先)
+    (r'少ない場合', ' [CND_COUNT_LESS_IF] '), # 「ない場合」に吸われるのを防ぐ
+    
+    # 宣言・カード名・対象 (ビッグマム・五老星・オカマ道)
+    (r'宣言した', ' [ACT_DECLARED] '),
+    (r'宣言し', ' [ACT_DECLARE_SEQ] '),
+    (r'宣言する', ' [ACT_DECLARE_DO] '),
+    (r'カード名', ' [NOUN_CARD_NAME] '),
+    (r'異なる', ' [CND_DIFFERENT] '),
+    (r'同じ', ' [CND_SAME] '),
+    (r'対象', ' [NOUN_TARGET] '),
+    (r'変更する', ' [ACT_CHANGE] '),
+    
+    # その他
+    (r'追加で', ' [ADV_ADDITIONALLY] '), # 紫ルフィ「ターンを追加で得る」
+    (r'後', ' [NOUN_AFTER] '),
+    (r'回', ' [CTR_TIMES] '),
+    (r',', ' [SEP_COMMA] '), # ジャッジ等のテキストに含まれるカンマ
+        # --- 20. 最終解決:残り3枚の完全消去 ---
+    
+    # [ナミ] 対策
+    (r'いて', ' [CND_EXIST_TE] '),
+    (r'て', ' [SEP_TE] '), # 万が一の汎用助詞
+    
+    # [バッファロー] 対策
+    (r'戻し', ' [ACT_RETURN_SEQ_GEN] '),
+    
+    # [ゼット] 対策
+    (r'する', ' [ACT_DO_GEN] '),
 ]
