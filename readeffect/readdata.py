@@ -127,9 +127,14 @@ def main():
         with open(f, 'r', encoding='utf-8') as file_obj:
             parser.feed(file_obj.read())
         all_cards.extend(parser.cards)
-        all_images.update(parser.image_urls)
+        
+        # 【変更点】 画像URLの重複処理を「先勝ち」に変更
+        # all_images.update(parser.image_urls) # ← 元の後勝ちロジック
+        for card_num, url in parser.image_urls.items():
+            if card_num not in all_images:
+                all_images[card_num] = url
 
-    # 重複除去
+    # 重複除去 (カード詳細データ側 - 既存のまま先勝ちロジック)
     unique_cards = {}
     for c in all_cards:
         num = c.get("number")

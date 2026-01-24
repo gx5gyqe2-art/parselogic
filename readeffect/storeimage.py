@@ -18,7 +18,7 @@ def download_images(json_path, save_dir='card_images'):
         print(f"フォルダ '{save_dir}' を作成しました。")
 
     total = len(image_data)
-    print(f"合計 {total} 件のダウンロードを開始します...")
+    print(f"合計 {total} 件のダウンロードを開始します（上書きモード）...")
 
     # 3. 各URLをダウンロード
     success_count = 0
@@ -33,13 +33,16 @@ def download_images(json_path, save_dir='card_images'):
         file_name = f"{card_num}{ext}"
         save_path = os.path.join(save_dir, file_name)
 
-        # すでにファイルが存在する場合はスキップ(再開時などに便利)
-        if os.path.exists(save_path):
-            print(f"[{i}/{total}] スキップ: {file_name} (存在します)")
-            continue
+        # 【変更点】
+        # 同名ファイルが存在する場合のスキップ処理を無効化（コメントアウト）しました。
+        # これにより、常にダウンロードが実行され、ファイルは上書きされます。
+        # if os.path.exists(save_path):
+        #     print(f"[{i}/{total}] スキップ: {file_name} (存在します)")
+        #     continue
 
         try:
             # ダウンロード実行
+            # 上書きされるため、最新のURLの内容が保存されます
             print(f"[{i}/{total}] ダウンロード中: {file_name}...", end='\r')
             urllib.request.urlretrieve(url, save_path)
             success_count += 1
