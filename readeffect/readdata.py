@@ -34,12 +34,10 @@ class CardAndImageParser(HTMLParser):
 
         if not self.in_modal_col: return
 
-        # 画像URLの抽出 (frontColクラス内のimgタグから取得)
+        # 画像URLの抽出
         if tag == 'img' and 'lazy' in classes:
-            # 公式サイトは通常 data-src に実際の画像パスが入っています
             img_src = attrs_dict.get('data-src') or attrs_dict.get('src')
             if img_src:
-                # 相対パスを絶対URLに変換したい場合はドメインを付与
                 full_url = "https://www.onepiece-cardgame.com" + img_src.replace('..', '')
                 self.current_card['image_url'] = full_url
 
@@ -107,9 +105,8 @@ class CardAndImageParser(HTMLParser):
             num = self.current_card.get('number')
             if num:
                  self.cards.append(self.current_card)
-                 # 画像URLリスト用に保存
-                 if 'image_url' in self.current_card:
-                     self.image_urls[num] = self.current_card['image_url']
+                 # クラス内では一旦すべて保持しておきます（選定はmainで行うため）
+                 self.image_urls[num] = self.current_card.get('image_url')
             self.in_modal_col = False
 
 def main():
@@ -126,22 +123,39 @@ def main():
         parser = CardAndImageParser()
         with open(f, 'r', encoding='utf-8') as file_obj:
             parser.feed(file_obj.read())
+        
+        # カード情報をリストに追加
         all_cards.extend(parser.cards)
         
-        # 【変更点】 画像URLの重複処理を「先勝ち」に変更
-        # all_images.update(parser.image_urls) # ← 元の後勝ちロジック
-        for card_num, url in parser.image_urls.items():
-            if card_num not in all_images:
-                all_images[card_num] = url
+        # 【変更点】 画像URLの選定ロジック
+        # parser.cards はファイルの出現順に並んでいるリストです
+        for card in parser.cards:
+            num = card.get('number')
+            url = card.get('image_url')
+            c_type = card.get('種類') # "リーダー", "キャラクター" etc
 
-    # 重複除去 (カード詳細データ側 - 既存のまま先勝ちロジック)
+            if not num or not url:
+                continue
+
+            # 1. まだその番号が登録されていない場合 -> 登録 (基本の通常版)
+            if num not in all_images:
+                all_images[num] = url
+            
+            # 2. すでに番号がある場合
+            else:
+                # 「リーダー」の場合のみ、後から出てきたURL(パラレル)で上書きする
+                if c_type == "リーダー":
+                    all_images[num] = url
+                # それ以外(キャラクター等)は上書きしない = 最初の(通常版)を維持
+
+    # 重複除去 (カード詳細データ側 - 先勝ちロジック)
     unique_cards = {}
     for c in all_cards:
         num = c.get("number")
         if num and num not in unique_cards:
             unique_cards[num] = c
 
-    # 1. カード詳細データ保存 (画像URLは含めない)
+    # 1. カード詳細データ保存
     final_cards = []
     keys_order = ["種類", "コスト", "ライフ", "色", "属性", "パワー", "カウンター", "効果(テキスト)", "効果(トリガー)", "特徴"]
     for i, (num, data) in enumerate(unique_cards.items(), 1):
@@ -153,7 +167,7 @@ def main():
     with open('opcg_cards_refined.json', 'w', encoding='utf-8') as f:
         json.dump(final_cards, f, ensure_ascii=False, indent=2)
 
-    # 2. 画像URLリストのみを別ファイルで保存
+    # 2. 画像URLリスト保存
     with open('opcg_images.json', 'w', encoding='utf-8') as f:
         json.dump(all_images, f, ensure_ascii=False, indent=2)
 
