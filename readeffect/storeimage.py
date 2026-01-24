@@ -46,8 +46,6 @@ def download_images(json_path, save_dir='card_images'):
             print(f"[{i}/{total}] ダウンロード中: {file_name}...", end='\r')
             urllib.request.urlretrieve(url, save_path)
             success_count += 1
-            # サーバーに負荷をかけすぎないよう、わずかに待機
-            time.sleep(0.1) 
         except Exception as e:
             print(f"\n[{i}/{total}] 失敗: {file_name} - {e}")
 
