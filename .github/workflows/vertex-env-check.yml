@@ -1,20 +1,15 @@
-name: Vertex AI Environment Check
+- uses: actions/checkout@v4
 
-on:
-  workflow_dispatch:
+- uses: google-github-actions/auth@v2
+  with:
+    credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+- uses: google-github-actions/setup-gcloud@v2
 
-      - uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+- name: Activate service account
+  run: |
+    gcloud auth activate-service-account \
+      --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
 
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Verify auth
-        run: gcloud auth list
-        
+- name: Verify auth
+  run: gcloud auth list
