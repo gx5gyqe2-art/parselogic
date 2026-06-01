@@ -154,11 +154,21 @@ def main():
                     all_images[num] = url
                 # それ以外(キャラクター等)は上書きしない = 最初の(通常版)を維持
 
-    # 重複除去 (カード詳細データ側 - 先勝ちロジック)
+    # 重複除去 (カード詳細データ側)
+    # 基本は先勝ち。ただし同一番号が重複した場合は、
+    # ブロックアイコンがより新しい(数値が大きい)再録版を優先して上書きする。
+    def block_rank(card):
+        try:
+            return int(card.get("ブロックアイコン", ""))
+        except (ValueError, TypeError):
+            return -1  # 'X' や未設定は最も古い扱い
+
     unique_cards = {}
     for c in all_cards:
         num = c.get("number")
-        if num and num not in unique_cards:
+        if not num:
+            continue
+        if num not in unique_cards or block_rank(c) > block_rank(unique_cards[num]):
             unique_cards[num] = c
 
     # 1. カード詳細データ保存
