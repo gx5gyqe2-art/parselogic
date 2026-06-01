@@ -1,1 +1,3 @@
 /readeffect/card_images/**
+__pycache__/
+*.pyc
