@@ -7,7 +7,7 @@ class CardAndImageParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.cards = []
-        self.image_urls = {} # {カード番号: 画像URL}
+        self.image_urls = {} # {カード番号: 画像URL}
         self.current_card = {}
         
         self.in_modal_col = False
@@ -18,9 +18,9 @@ class CardAndImageParser(HTMLParser):
         self.value_buffer = ""
         
         self.class_map = {
-            'power': 'パワー', 'attribute': '属性', 'counter': 'カウンター',
+            'power': 'パワー', 'attribute': '属性', 'counter': 'カウンター',
             'color': '色', 'feature': '特徴', 'text': '効果(テキスト)',
-            'trigger': '効果(トリガー)', 'cost': 'コスト' 
+            'trigger': '効果(トリガー)', 'cost': 'コスト', 'block_icon': 'ブロックアイコン'
         }
 
     def handle_starttag(self, tag, attrs):
@@ -42,6 +42,12 @@ class CardAndImageParser(HTMLParser):
                 self.current_card['image_url'] = full_url
 
         if tag == 'div':
+            # HTMLクラス "block" を内部識別子 block_icon にマッピング
+            if 'block' in classes and 'block_icon' in self.class_map:
+                self.current_target_class = 'block_icon'
+                self.label_buffer = ""
+                self.value_buffer = ""
+                return
             if 'cardName' in classes:
                 self.current_target_class = 'cardName'
                 self.value_buffer = ""
@@ -63,7 +69,7 @@ class CardAndImageParser(HTMLParser):
         if tag == 'img' and self.current_target_class == 'attribute':
             self.value_buffer += attrs_dict.get('alt', '')
 
-        if tag == 'br' and self.current_target_class:
+        if tag == 'br' and self.current_target_class and not self.in_label_tag:
             self.value_buffer += " / "
 
     def handle_data(self, data):
@@ -87,7 +93,7 @@ class CardAndImageParser(HTMLParser):
                 if len(parts) >= 1: self.current_card['number'] = parts[0]
                 if len(parts) >= 3: 
                     raw_type = parts[2]
-                    type_map = {"LEADER": "リーダー", "CHARACTER": "キャラクター", "EVENT": "イベント", "STAGE": "ステージ"}
+                    type_map = {"LEADER": "リーダー", "CHARACTER": "キャラクター", "EVENT": "イベント", "STAGE": "ステージ"}
                     self.current_card['種類'] = type_map.get(raw_type, raw_type)
             elif self.current_target_class in self.class_map:
                 final_val = self.value_buffer.strip()
@@ -112,7 +118,7 @@ class CardAndImageParser(HTMLParser):
 def main():
     html_files = glob.glob("*.html")
     if not html_files:
-        print("HTMLファイルが見つかりません。")
+        print("HTMLファイルが見つかりません。")
         return
 
     all_cards = []
@@ -132,7 +138,7 @@ def main():
         for card in parser.cards:
             num = card.get('number')
             url = card.get('image_url')
-            c_type = card.get('種類') # "リーダー", "キャラクター" etc
+            c_type = card.get('種類') # "リーダー", "キャラクター" etc
 
             if not num or not url:
                 continue
@@ -143,8 +149,8 @@ def main():
             
             # 2. すでに番号がある場合
             else:
-                # 「リーダー」の場合のみ、後から出てきたURL(パラレル)で上書きする
-                if c_type == "リーダー":
+                # 「リーダー」の場合のみ、後から出てきたURL(パラレル)で上書きする
+                if c_type == "リーダー":
                     all_images[num] = url
                 # それ以外(キャラクター等)は上書きしない = 最初の(通常版)を維持
 
@@ -155,9 +161,9 @@ def main():
         if num and num not in unique_cards:
             unique_cards[num] = c
 
-    # 1. カード詳細データ保存
+    # 1. カード詳細データ保存
     final_cards = []
-    keys_order = ["種類", "コスト", "ライフ", "色", "属性", "パワー", "カウンター", "効果(テキスト)", "効果(トリガー)", "特徴"]
+    keys_order = ["種類", "コスト", "ライフ", "色", "ブロックアイコン", "属性", "パワー", "カウンター", "効果(テキスト)", "効果(トリガー)", "特徴"]
     for i, (num, data) in enumerate(unique_cards.items(), 1):
         ordered = {"id": i, "number": num, "name": data.get("name", "")}
         for k in keys_order:
@@ -172,7 +178,7 @@ def main():
         json.dump(all_images, f, ensure_ascii=False, indent=2)
 
     print("-" * 20)
-    print(f"カードデータ: opcg_cards_refined.json")
+    print(f"カードデータ: opcg_cards_refined.json")
     print(f"画像URLリスト: opcg_images.json")
     print(f"完了しました!")
 
