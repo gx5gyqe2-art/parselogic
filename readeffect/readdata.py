@@ -9,14 +9,14 @@ class CardAndImageParser(HTMLParser):
         self.cards = []
         self.image_urls = {} # {カード番号: 画像URL}
         self.current_card = {}
-        
+
         self.in_modal_col = False
         self.current_target_class = None
         self.in_label_tag = False
-        
+
         self.label_buffer = ""
         self.value_buffer = ""
-        
+
         self.class_map = {
             'power': 'パワー', 'attribute': '属性', 'counter': 'カウンター',
             'color': '色', 'feature': '特徴', 'text': '効果(テキスト)',
@@ -26,7 +26,7 @@ class CardAndImageParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         attrs_dict = dict(attrs)
         classes = attrs_dict.get('class', '').split()
-        
+
         if tag == 'dl' and 'modalCol' in classes:
             self.in_modal_col = True
             self.current_card = {}
@@ -62,10 +62,10 @@ class CardAndImageParser(HTMLParser):
                     self.label_buffer = ""
                     self.value_buffer = ""
                     return
-        
+
         if tag == 'h3' and self.current_target_class:
             self.in_label_tag = True
-            
+
         if tag == 'img' and self.current_target_class == 'attribute':
             self.value_buffer += attrs_dict.get('alt', '')
 
@@ -91,7 +91,7 @@ class CardAndImageParser(HTMLParser):
                 full_text = self.value_buffer.replace("\n", "").strip()
                 parts = [p.strip() for p in full_text.split('|')]
                 if len(parts) >= 1: self.current_card['number'] = parts[0]
-                if len(parts) >= 3: 
+                if len(parts) >= 3:
                     raw_type = parts[2]
                     type_map = {"LEADER": "リーダー", "CHARACTER": "キャラクター", "EVENT": "イベント", "STAGE": "ステージ"}
                     self.current_card['種類'] = type_map.get(raw_type, raw_type)
@@ -106,7 +106,7 @@ class CardAndImageParser(HTMLParser):
             self.current_target_class = None
             self.label_buffer = ""
             self.value_buffer = ""
-        
+
         if tag == 'dl' and self.in_modal_col:
             num = self.current_card.get('number')
             if num:
@@ -115,72 +115,101 @@ class CardAndImageParser(HTMLParser):
                  self.image_urls[num] = self.current_card.get('image_url')
             self.in_modal_col = False
 
+
+# ---------------------------------------------------------------------------
+# 共通ロジック（フルビルド main() と差分取り込み update_cards.py の両方で使う）
+# ---------------------------------------------------------------------------
+
+# 出力カードのキー並び（number / name の後ろに続く順序）
+KEYS_ORDER = ["種類", "コスト", "ライフ", "色", "ブロックアイコン", "属性",
+              "パワー", "カウンター", "効果(テキスト)", "効果(トリガー)", "特徴"]
+
+
+def parse_html_files(files):
+    """HTMLファイル群を解析し、出現順の生カードリストを返す（重複除去なし）。"""
+    all_cards = []
+    for f in files:
+        print(f"解析中: {os.path.basename(f)}")
+        parser = CardAndImageParser()
+        with open(f, 'r', encoding='utf-8') as file_obj:
+            parser.feed(file_obj.read())
+        all_cards.extend(parser.cards)
+    return all_cards
+
+
+def block_rank(card):
+    """ブロックアイコン（再録の新しさ）を数値化。'X'や未設定は最古扱い。"""
+    try:
+        return int(card.get("ブロックアイコン", ""))
+    except (ValueError, TypeError):
+        return -1
+
+
+def select_images(all_cards, base=None):
+    """カード出現順から画像URLを選定して {番号: URL} を返す。
+
+    基本は先勝ち（通常版を維持）。「リーダー」のみ後発URL（パラレル）で上書き。
+    base を渡すと既存の画像マップを土台にマージする（差分取り込み用）。
+    """
+    images = dict(base) if base else {}
+    for card in all_cards:
+        num = card.get('number')
+        url = card.get('image_url')
+        c_type = card.get('種類')  # "リーダー", "キャラクター" etc
+
+        if not num or not url:
+            continue
+
+        # まだ未登録 -> 登録（基本の通常版）
+        if num not in images:
+            images[num] = url
+        # 既に登録済み -> リーダーのみ後発URL（パラレル）で上書き
+        elif c_type == "リーダー":
+            images[num] = url
+    return images
+
+
+def dedup_cards(all_cards):
+    """同一番号は block_rank の大きい（新しい再録）版を優先して {番号: card} を返す。"""
+    unique = {}
+    for c in all_cards:
+        num = c.get("number")
+        if not num:
+            continue
+        if num not in unique or block_rank(c) > block_rank(unique[num]):
+            unique[num] = c
+    return unique
+
+
+def ordered_card(num, data, card_id):
+    """パーサの生データを出力形式（id/number/name + KEYS_ORDER）に整形する。"""
+    ordered = {"id": card_id, "number": num, "name": data.get("name", "")}
+    for k in KEYS_ORDER:
+        if k in data:
+            ordered[k] = data[k]
+    return ordered
+
+
 def main():
     html_files = glob.glob("*.html")
     if not html_files:
         print("HTMLファイルが見つかりません。")
         return
 
-    all_cards = []
-    all_images = {}
+    # 解析（出現順の生カードリスト）
+    all_cards = parse_html_files(html_files)
 
-    for f in html_files:
-        print(f"解析中: {os.path.basename(f)}")
-        parser = CardAndImageParser()
-        with open(f, 'r', encoding='utf-8') as file_obj:
-            parser.feed(file_obj.read())
-        
-        # カード情報をリストに追加
-        all_cards.extend(parser.cards)
-        
-        # 【変更点】 画像URLの選定ロジック
-        # parser.cards はファイルの出現順に並んでいるリストです
-        for card in parser.cards:
-            num = card.get('number')
-            url = card.get('image_url')
-            c_type = card.get('種類') # "リーダー", "キャラクター" etc
+    # 画像URLの選定
+    all_images = select_images(all_cards)
 
-            if not num or not url:
-                continue
-
-            # 1. まだその番号が登録されていない場合 -> 登録 (基本の通常版)
-            if num not in all_images:
-                all_images[num] = url
-            
-            # 2. すでに番号がある場合
-            else:
-                # 「リーダー」の場合のみ、後から出てきたURL(パラレル)で上書きする
-                if c_type == "リーダー":
-                    all_images[num] = url
-                # それ以外(キャラクター等)は上書きしない = 最初の(通常版)を維持
-
-    # 重複除去 (カード詳細データ側)
-    # 基本は先勝ち。ただし同一番号が重複した場合は、
-    # ブロックアイコンがより新しい(数値が大きい)再録版を優先して上書きする。
-    def block_rank(card):
-        try:
-            return int(card.get("ブロックアイコン", ""))
-        except (ValueError, TypeError):
-            return -1  # 'X' や未設定は最も古い扱い
-
-    unique_cards = {}
-    for c in all_cards:
-        num = c.get("number")
-        if not num:
-            continue
-        if num not in unique_cards or block_rank(c) > block_rank(unique_cards[num]):
-            unique_cards[num] = c
+    # カード詳細データの重複除去（再録は新しい版を優先）
+    unique_cards = dedup_cards(all_cards)
 
     # 1. カード詳細データ保存
-    final_cards = []
-    keys_order = ["種類", "コスト", "ライフ", "色", "ブロックアイコン", "属性", "パワー", "カウンター", "効果(テキスト)", "効果(トリガー)", "特徴"]
-    for i, (num, data) in enumerate(unique_cards.items(), 1):
-        ordered = {"id": i, "number": num, "name": data.get("name", "")}
-        for k in keys_order:
-            if k in data: ordered[k] = data[k]
-        final_cards.append(ordered)
+    final_cards = [ordered_card(num, data, i)
+                   for i, (num, data) in enumerate(unique_cards.items(), 1)]
 
-    with open('opcg_cards_refined.json', 'w', encoding='utf-8') as f:
+    with open('opcg_cards.json', 'w', encoding='utf-8') as f:
         json.dump(final_cards, f, ensure_ascii=False, indent=2)
 
     # 2. 画像URLリスト保存
@@ -188,7 +217,7 @@ def main():
         json.dump(all_images, f, ensure_ascii=False, indent=2)
 
     print("-" * 20)
-    print(f"カードデータ: opcg_cards_refined.json")
+    print(f"カードデータ: opcg_cards.json")
     print(f"画像URLリスト: opcg_images.json")
     print(f"完了しました!")
 
