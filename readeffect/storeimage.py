@@ -4,21 +4,29 @@ import sys
 import urllib.request
 import time
 
+# このスクリプトのある場所。cwd（Pythonistaでは別の場所になりがち）に依存しない。
+HERE = os.path.dirname(os.path.abspath(__file__))
+
 
 def load_map(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def download_images(full_path="opcg_images.json", only_path=None,
-                    save_dir="card_images", skip_existing=True):
+def download_images(full_path=None, only_path=None,
+                    save_dir=None, skip_existing=True):
     """画像をダウンロードする。
 
-    full_path : シャード（700件分割）の並び基準となる全量マップ。
+    full_path : シャード（700件分割）の並び基準となる全量マップ。既定はスクリプト隣の opcg_images.json。
     only_path : 指定するとそのファイルに載っている番号だけを取得（= 新カードのみ）。
                 差分取得では URL が変わっている可能性があるため常に上書きする。
+    save_dir  : 保存先。既定はスクリプト隣の card_images/。
     skip_existing : 全量取得（only_path 未指定）時、既存ファイルはスキップして冪等にする。
     """
+    if full_path is None:
+        full_path = os.path.join(HERE, "opcg_images.json")
+    if save_dir is None:
+        save_dir = os.path.join(HERE, "card_images")
     try:
         full = load_map(full_path)
     except Exception as e:
