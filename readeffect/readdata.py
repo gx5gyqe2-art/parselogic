@@ -191,7 +191,9 @@ def ordered_card(num, data, card_id):
 
 
 def main():
-    html_files = glob.glob("*.html")
+    # cwd（Pythonistaでは別の場所になりがち）に依存せず、スクリプトの場所を基準にする
+    here = os.path.dirname(os.path.abspath(__file__))
+    html_files = sorted(glob.glob(os.path.join(here, "*.html")))
     if not html_files:
         print("HTMLファイルが見つかりません。")
         return
@@ -209,11 +211,11 @@ def main():
     final_cards = [ordered_card(num, data, i)
                    for i, (num, data) in enumerate(unique_cards.items(), 1)]
 
-    with open('opcg_cards.json', 'w', encoding='utf-8') as f:
+    with open(os.path.join(here, 'opcg_cards.json'), 'w', encoding='utf-8') as f:
         json.dump(final_cards, f, ensure_ascii=False, indent=2)
 
     # 2. 画像URLリスト保存
-    with open('opcg_images.json', 'w', encoding='utf-8') as f:
+    with open(os.path.join(here, 'opcg_images.json'), 'w', encoding='utf-8') as f:
         json.dump(all_images, f, ensure_ascii=False, indent=2)
 
     print("-" * 20)
