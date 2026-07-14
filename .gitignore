@@ -1,5 +1,4 @@
 /readeffect/card_images/**
 /readeffect/opcg_images_new.json
-/readeffect/series_*.html
 __pycache__/
 *.pyc
