@@ -8,7 +8,7 @@
 | ファイル | 役割 |
 | --- | --- |
 | `readdata.py` | HTML解析の本体。フルビルド（全HTMLから作り直し）と、再利用可能なパース関数を提供 |
-| `update_cards.py` | **差分取り込み**。新カードのHTMLを渡して既存マスターへマージ |
+| `update_cards.py` | **差分取り込み**。同階層のHTMLを自動読み込みし、マージ＋新カード画像取得まで1コマンドで実行 |
 | `storeimage.py` | 画像ダウンローダ（700件ごとにサブフォルダ分割） |
 | `opcg_cards.json` | **マスター**: 全カードデータ（唯一の正）|
 | `opcg_images.json` | **マスター**: 全カードの画像URL（`opcg_cards.json` と番号が一致）|
@@ -26,27 +26,31 @@ python readdata.py
 # -> opcg_cards.json / opcg_images.json を全量で再生成
 ```
 
-### B. 差分取り込み（新弾の追加）★
+### B. 差分取り込み（新弾の追加）★ ＝ 1コマンドで完結
 
-新規追加カードのHTMLを渡すと、既存 `opcg_cards.json` に**新カードだけ追加**される。
+新規追加カードのHTMLを **`readeffect/` 直下に置いて** 実行するだけ。
+マージ → 差分抽出 → **新カードの画像取得まで自動で行う**。
 
 ```bash
-python update_cards.py 新弾.html
+cd readeffect
+python update_cards.py            # 同じ階層の *.html を全て自動読み込み
 ```
 
+- HTMLは引数指定も可能（`python update_cards.py 新弾.html`）。無指定なら同階層の `*.html` を全読み込み
 - 未登録の番号 → 末尾に追加（`id` は連番の続き）
 - 既存番号でもブロックアイコンが新しい**再録**なら、その場で更新（`id` は維持）
 - 既存と同じ（または古い）版は skip（何度流しても結果が変わらない=冪等）
-- `opcg_images_new.json` に「新規 or 画像URLが変わった分」だけを書き出す
+- `opcg_images_new.json`（新規＋画像URLが変わった分）を書き出し、その分だけを `card_images/` へ取得
+- 画像取得を止めたいときは `--no-image` を付ける（マージのみ）
 
-### 画像の取得
+> 注: `old/` は過去ダンプの保管場所で **自動読み込みの対象外**（毎回2MB級の色別ダンプを
+> 読み直さないため）。差分取り込みする新弾HTMLは `readeffect/` 直下に置く。
+
+### 画像だけを別途取得したい場合
 
 ```bash
-# 新カードのみ取得（差分取り込み直後）
-python storeimage.py opcg_images_new.json
-
-# 全量から不足分のみ取得（引数なし。既存ファイルはスキップ）
-python storeimage.py
+python storeimage.py opcg_images_new.json   # 差分（新カード）のみ
+python storeimage.py                        # 全量から不足分のみ（既存はスキップ）
 ```
 
 画像は `opcg_images.json` 上の並び順で 700 件ごとに `card_images/1/`, `card_images/2/`,
