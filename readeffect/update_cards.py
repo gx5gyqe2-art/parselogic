@@ -1,23 +1,27 @@
-"""差分取り込み: 新カードのHTMLを渡し、既存マスターへマージする。
+"""差分取り込み: 新カードのHTMLを既存マスターへマージし、新カード画像まで取得する。
 
 使い方:
-    python update_cards.py 新弾.html [別の.html ...]
+    python update_cards.py                # 同じ階層(カレント)の *.html を全て自動読み込み
+    python update_cards.py 新弾.html      # ファイルを明示指定することも可能
+    python update_cards.py --no-image     # 画像の取得はスキップ（マージのみ）
 
-やること:
+やること（1コマンドで完結）:
   1) 既存 opcg_cards.json / opcg_images.json を読み込む（無ければ空から開始）。
-  2) 渡されたHTMLを解析し、
+  2) HTMLを解析し、
        - 未登録の番号 -> 新カードとして末尾に追加（idは連番の続き）
        - 既存番号でも block_rank（ブロックアイコン）が新しい再録 -> その場で更新（idは維持）
      を行う。
   3) 画像は「新規 or URLが変わった（リーダーのパラレル差し替え等）」ものだけを
-     opcg_images_new.json に書き出す（= 新カードのみ取得するための差分リスト）。
+     opcg_images_new.json に書き出し、その分だけを card_images/ へダウンロードする。
      opcg_images.json 本体もマージ後の全量で更新する。
 
 出力:
     opcg_cards.json        マージ後の全カード（マスター更新）
     opcg_images.json       マージ後の全画像URL（マスター更新）
-    opcg_images_new.json   今回追加/変更された画像URLだけの差分（storeimage.py 用）
+    opcg_images_new.json   今回追加/変更された画像URLだけの差分
+    card_images/           新カード分の画像（--no-image 指定時は取得しない）
 """
+import glob
 import json
 import os
 import sys
@@ -29,6 +33,7 @@ from readdata import (
     select_images,
     ordered_card,
 )
+import storeimage
 
 CARDS_PATH = "opcg_cards.json"
 IMAGES_PATH = "opcg_images.json"
@@ -44,14 +49,21 @@ def load_json(path, default):
 
 
 def main(argv):
-    html_files = [a for a in argv if a.lower().endswith(".html")]
+    no_image = "--no-image" in argv
+    args = [a for a in argv if a != "--no-image"]
+
+    # 引数でHTMLを明示指定していればそれを、無ければ同じ階層の *.html を全て自動読み込み
+    html_files = [a for a in args if a.lower().endswith(".html")]
     if not html_files:
-        print("使い方: python update_cards.py 新カードの.html [追加の.html ...]")
+        html_files = sorted(glob.glob("*.html"))
+    if not html_files:
+        print("HTMLが見つかりません。カレントに *.html を置くか、引数でファイルを指定してください。")
         return 1
     for f in html_files:
         if not os.path.exists(f):
             print(f"エラー: HTMLが見つかりません: {f}")
             return 1
+    print(f"読み込み対象HTML: {[os.path.basename(f) for f in html_files]}")
 
     # 既存マスターの読み込み
     master = load_json(CARDS_PATH, [])
@@ -104,8 +116,18 @@ def main(argv):
     print(f"変更なしskip : {len(skipped)} 件")
     print(f"取得対象画像 : {len(delta_images)} 件 -> {NEW_IMAGES_PATH}")
     print(f"マスター件数 : {len(master)} 件 -> {CARDS_PATH}")
+
+    # 新カード分の画像をそのまま取得（storeimage を内部呼び出し＝保存処理を統一）
+    if delta_images and not no_image:
+        print("-" * 30)
+        print("新カードの画像を取得します...")
+        storeimage.download_images(full_path=IMAGES_PATH, only_path=NEW_IMAGES_PATH)
+    elif no_image:
+        print(f"(--no-image 指定のため画像取得はスキップ / 後で: python storeimage.py {NEW_IMAGES_PATH})")
+    else:
+        print("取得すべき新規画像はありません。")
+
     print("完了しました!")
-    print(f"画像DL: python storeimage.py {NEW_IMAGES_PATH}")
     return 0
 
 
